@@ -53,7 +53,11 @@ function App() {
 
   useEffect(()=> {
     const fetchUserSkills = async()=> {
-      const response = await fetch(`/api/users/${auth.id}/userSkills`);
+      const response = await fetch(`/api/users/${auth.id}/userSkills`, {
+        headers: {
+          authorization: window.localStorage.getItem('token')
+        }
+      });
       const json = await response.json();
       if(response.ok){
         setUserSkills(json);
@@ -69,6 +73,34 @@ function App() {
       setUserSkills([]);
     }
   }, [auth]);
+
+  const addUserSkill = async(skill_id)=> {
+    const response = await fetch(`/api/users/${auth.id}/userSkills`, {
+      method: 'POST',
+      body: JSON.stringify({ skill_id}),
+      headers: {
+        'Content-Type': 'application/json',
+        authorization: window.localStorage.getItem('token')
+      }
+    });
+    const json = await response.json();
+    if(response.ok){
+      setUserSkills([...userSkills, json]);
+    }
+    else {
+      console.log(json);
+    }
+  };
+
+  const removeUserSkill = async(id)=> {
+    const response = await fetch(`/api/users/${auth.id}/userSkills/${id}`, {
+      method: 'DELETE',
+      headers: {
+        authorization: window.localStorage.getItem('token')
+      }
+    });
+    setUserSkills(userSkills.filter(userSkill => userSkill.id !== id));
+  };
 
   const attemptLoginWithToken = async()=> {
     const token = window.localStorage.getItem('token');
@@ -101,29 +133,6 @@ function App() {
     }
   };
 
-  const addUserSkill = async(skill_id)=> {
-    const response = await fetch(`/api/users/${auth.id}/userSkills`, {
-      method: 'POST',
-      body: JSON.stringify({ skill_id}),
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-    const json = await response.json();
-    if(response.ok){
-      setUserSkills([...userSkills, json]);
-    }
-    else {
-      console.log(json);
-    }
-  };
-
-  const removeUserSkill = async(id)=> {
-    const response = await fetch(`/api/users/${auth.id}/userSkills/${id}`, {
-      method: 'DELETE'
-    });
-    setUserSkills(userSkills.filter(userSkill => userSkill.id !== id));
-  };
 
   const logout = ()=> {
     window.localStorage.removeItem('token');
