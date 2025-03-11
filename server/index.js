@@ -20,6 +20,16 @@ const path = require('path');
 app.get('/', (req, res)=> res.sendFile(path.join(__dirname, '../client/dist/index.html')));
 app.use('/assets', express.static(path.join(__dirname, '../client/dist/assets'))); 
 
+const isLoggedIn = async(req, res, next)=> {
+  try {
+    req.user = await findUserByToken(req.headers.authorization);
+    next();
+  }
+  catch(ex){
+    next(ex);
+  }
+};
+
 
 app.post('/api/auth/login', async(req, res, next)=> {
   try {
@@ -30,9 +40,9 @@ app.post('/api/auth/login', async(req, res, next)=> {
   }
 });
 
-app.get('/api/auth/me', async(req, res, next)=> {
+app.get('/api/auth/me', isLoggedIn, (req, res, next)=> {
   try {
-    res.send(await findUserByToken(req.headers.authorization));
+    res.send(req.user);
   }
   catch(ex){
     next(ex);
@@ -57,8 +67,13 @@ app.get('/api/users', async(req, res, next)=> {
   }
 });
 
-app.get('/api/users/:id/userSkills', async(req, res, next)=> {
+app.get('/api/users/:id/userSkills', isLoggedIn, async(req, res, next)=> {
   try {
+    if(req.params.id !== req.user.id){
+      const error = Error('not authorized');
+      error.status = 401;
+      throw error;
+    }
     res.send(await fetchUserSkills(req.params.id));
   }
   catch(ex){
@@ -66,8 +81,13 @@ app.get('/api/users/:id/userSkills', async(req, res, next)=> {
   }
 });
 
-app.delete('/api/users/:userId/userSkills/:id', async(req, res, next)=> {
+app.delete('/api/users/:userId/userSkills/:id', isLoggedIn, async(req, res, next)=> {
   try {
+    if(req.params.userId !== req.user.id){
+      const error = Error('not authorized');
+      error.status = 401;
+      throw error;
+    }
     await deleteUserSkill({ user_id: req.params.userId, id: req.params.id });
     res.sendStatus(204);
   }
@@ -76,8 +96,13 @@ app.delete('/api/users/:userId/userSkills/:id', async(req, res, next)=> {
   }
 });
 
-app.post('/api/users/:id/userSkills', async(req, res, next)=> {
+app.post('/api/users/:id/userSkills', isLoggedIn, async(req, res, next)=> {
   try {
+    if(req.params.id !== req.user.id){
+      const error = Error('not authorized');
+      error.status = 401;
+      throw error;
+    }
     res.status(201).send(await createUserSkill({user_id: req.params.id, skill_id: req.body.skill_id}));
   }
   catch(ex){
@@ -119,7 +144,6 @@ const init = async()=> {
   console.log(await fetchUserSkills(moe.id));
   await deleteUserSkill({ user_id: moe.id, id: userSkills[0].id});
   console.log(await fetchUserSkills(moe.id));
-
   console.log('data seeded');
 
   const port = process.env.PORT || 3000;
